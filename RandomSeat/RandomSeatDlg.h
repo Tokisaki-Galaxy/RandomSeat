@@ -47,4 +47,5 @@ public:
 	// 一排有几个人
 	int v_Num;
 	afx_msg void OnBnClickedSelect();
+	int check(std::vector<std::string> a, int flag);
 };

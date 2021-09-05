@@ -189,18 +189,23 @@ void CRandomSeatDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
+
 	using namespace std;
 	UpdateData(TRUE);
 
 	// 判断输出文件是否存在
 	if (PathFileExists(v_File_Path))
 	{
-		MessageBox(_T("输出文件已经存在"));
-		return;
+		if (MessageBox(_T("好像之前已经有了一个文件了，是否要覆盖？\n覆盖将会导致原来的文件不可逆丢失"), NULL, MB_YESNO | MB_ICONQUESTION) == IDNO)
+			return;
+		DeleteFile(v_File_Path);
 	}
 
-	// 生成随机位置
-	random_shuffle(name_list.begin(), name_list.end());
+	// 生成“随机”位置
+	srand(time(0));
+	do {
+		random_shuffle(name_list.begin(), name_list.end());
+	} while ((check(name_list, v_Num * 2) && (!check(name_list, name_list.size()))));
 
 	// 写入到csv文件
 	ofstream wfile;
@@ -254,4 +259,18 @@ void CRandomSeatDlg::OnBnClickedSelect()
 		v_File_Path = openFileDlg.GetPathName();
 	}
 	UpdateData(FALSE);
+}
+
+
+inline int CRandomSeatDlg::check(std::vector<std::string> a,int flag= 8 * 2)	//找人，找到返回0，没找到返回1
+{
+	// TODO: 在此处添加实现代码.
+	for (size_t i = 0; i < flag; i++)
+	{
+		if (a.at(i) == "xxx")
+		{
+			return 0;
+		}
+	}
+	return 1;
 }
