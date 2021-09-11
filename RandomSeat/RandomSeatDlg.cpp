@@ -57,6 +57,7 @@ CRandomSeatDlg::CRandomSeatDlg(CWnd* pParent /*=nullptr*/)
 	, v_isopen(TRUE)
 	, v_isgroup(TRUE)
 	, v_Num(8)
+	, v_Down(TRUE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -69,6 +70,7 @@ void CRandomSeatDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_ISOPEN, v_isopen);
 	DDX_Check(pDX, IDC_ISGROUP, v_isgroup);
 	DDX_Text(pDX, IDC_NUM, v_Num);
+	DDX_Check(pDX, IDC_DOWN, v_Down);
 }
 
 BEGIN_MESSAGE_MAP(CRandomSeatDlg, CDialogEx)
@@ -116,10 +118,21 @@ BOOL CRandomSeatDlg::OnInitDialog()
 
 	std::ifstream rfile;
 	std::string tmp;
-	rfile.open(_T("学生名单.txt"));
-	if (rfile.fail())
+	std::wstring datapath;
+	datapath = L"学生名单.txt";
+
+	if (PathFileExists(datapath.c_str()) == false)	// 如果文件不存在
 	{
-		CWnd::MessageBox(L"学生名单文件打开失败");
+		MessageBox(_T("没有在当前目录下找到\"学生名单.txt\"，请手动选择文件路径。"), NULL, MB_OK | MB_ICONERROR);
+		CFileDialog fileDlg(TRUE, _T("txt"), NULL, 0, _T("文本文件(*.txt)|*.txt|所有文件(*.*)|*.*||"), this);
+		fileDlg.DoModal();
+		datapath = fileDlg.GetPathName().GetString();
+	}
+
+	rfile.open(_T("学生名单.txt"));
+	if (rfile.fail() == true)
+	{
+		MessageBox(_T("\"学生名单.txt\"文件打开失败"), NULL, MB_YESNO | MB_ICONERROR);
 		exit(1);
 	}
 	while (!rfile.eof())
@@ -184,17 +197,21 @@ HCURSOR CRandomSeatDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+inline void Centre(std::istream i)
+{
+	return;
+}
 
 void CRandomSeatDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	//CDialogEx::OnOK();
+//	CDialogEx::OnOK();
 
 	using namespace std;
 	UpdateData(TRUE);
 
 	// 判断输出文件是否存在
-	if (PathFileExists(v_File_Path))
+	if (PathFileExists(v_File_Path) == true)
 	{
 		if (MessageBox(_T("好像之前已经有了一个文件了，是否要覆盖？\n覆盖将会导致原来的文件不可逆丢失"), NULL, MB_YESNO | MB_ICONQUESTION) == IDNO)
 			return;
@@ -205,15 +222,18 @@ void CRandomSeatDlg::OnBnClickedOk()
 	srand(time(0));
 	do {
 		random_shuffle(name_list.begin(), name_list.end());
-	} while ((check(name_list, v_Num * 2) && (!check(name_list, name_list.size()))));
+	} while ((check(name_list, v_Num * 2) && (!check(name_list, name_list.size()))));	// 必须名单里有这个名字才会重复生成直到符合条件
 
 	// 写入到csv文件
 	ofstream wfile;
 	wfile.open(v_File_Path);
-	wfile << "讲台" << endl;
+
+	if (v_Down == false)
+		PlatformInMiddle(wfile);
+
 	for (size_t i = 0; i < name_list.size(); i++)
 	{
-		if ((i % v_Num == 0)&&(i!=0))
+		if ((i % v_Num == 0) && (i != 0))
 			wfile << endl;
 		if (v_isgroup)
 		{
@@ -228,6 +248,50 @@ void CRandomSeatDlg::OnBnClickedOk()
 		wfile << name_list.at(i) << ",";
 	}
 	wfile.close();
+
+	if (v_Down == false)	// 如果不要求讲台向下，那么已经完成。rnm为什么不给用goto？。。
+	{
+		v_Status = "座位表生成完成";
+		UpdateData(FALSE);
+
+		if (v_isopen)
+			ShellExecute(NULL, _T("open"), v_File_Path, NULL, NULL, SW_SHOWNORMAL);
+		return;
+	}
+
+	ifstream ifs;
+	string tmp;
+	vector<string> vtmp;
+	ifs.open(v_File_Path);
+	while (!ifs.eof())
+	{
+		getline(ifs, tmp);
+		vtmp.push_back(tmp);
+	}
+	ifs.close();
+
+	ofstream of;
+	of.open(v_File_Path, ios::out | ios::trunc);
+
+	for (int i = vtmp.size() - 1; i > -1; i--)
+	{
+		if (i == vtmp.size() - 1)
+		{
+			of << "后门,";
+		}
+		else if (i == 1)
+		{
+			of << "前门,";
+		}
+		else
+		{
+			of << ",";
+		}
+		of << vtmp.at(i) << endl;
+	}
+	PlatformInMiddle(of);
+	of.close();
+
 	v_Status = "座位表生成完成";
 	UpdateData(FALSE);
 
@@ -247,7 +311,6 @@ void CRandomSeatDlg::OnBnClickedAbout()
 void CRandomSeatDlg::OnBnClickedSelect()
 {
 	// TODO: 在此添加控件通知处理程序代码
-// TODO: 在此添加控件通知处理程序代码
 	BOOL isOpen = FALSE;					//是否打开(否则为保存)
 	CString defaultEx = L"csv";				//默认扩展名
 	CString fileName = L"座位表.csv";			//默认文件名
@@ -259,18 +322,4 @@ void CRandomSeatDlg::OnBnClickedSelect()
 		v_File_Path = openFileDlg.GetPathName();
 	}
 	UpdateData(FALSE);
-}
-
-
-inline int CRandomSeatDlg::check(std::vector<std::string> a,int flag= 8 * 2)	//找人，找到返回0，没找到返回1
-{
-	// TODO: 在此处添加实现代码.
-	for (size_t i = 0; i < flag; i++)
-	{
-		if (a.at(i) == "xxx")
-		{
-			return 0;
-		}
-	}
-	return 1;
 }

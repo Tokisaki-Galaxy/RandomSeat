@@ -47,5 +47,27 @@ public:
 	// 一排有几个人
 	int v_Num;
 	afx_msg void OnBnClickedSelect();
-	int check(std::vector<std::string> a, int flag);
+	// 讲台在下
+	BOOL v_Down;
+
+	// 生成讲台位置
+	void PlatformInMiddle(std::ostream& is)
+	{
+		// TODO: 在此处添加实现代码.
+		for (size_t i = 0; i < (int)(v_Num / 2) + 1 + 1; i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
+		{
+			is << ",";
+		}
+		is << "讲台" << std::endl;
+	}
+
+	// 检查名字。找到返回0，没找到返回1
+	int check(std::vector<std::string> a, int flag)
+	{
+		// TODO: 在此处添加实现代码.
+		for (size_t i = 0; i < flag; i++)
+			if (a.at(i) == "韩镒名")
+				return 0;
+		return 1;
+	}
 };

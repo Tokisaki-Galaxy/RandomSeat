@@ -15,6 +15,8 @@
 #define IDC_NUM                         1008
 #define IDC_ABOUT2                      1009
 #define IDC_ABOUT                       1009
+#define IDC_ISOPEN2                     1010
+#define IDC_DOWN                        1010
 
 // Next default values for new objects
 // 
