@@ -66,7 +66,7 @@ public:
 	{
 		// TODO: 在此处添加实现代码.
 		for (size_t i = 0; i < flag; i++)
-			if (a.at(i) == "韩镒名")
+			if (a.at(i) == "xxx")
 				return 0;
 		return 1;
 	}
