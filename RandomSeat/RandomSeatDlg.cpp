@@ -259,38 +259,37 @@ void CRandomSeatDlg::OnBnClickedOk()
 		return;
 	}
 
-	ifstream ifs;
+	fstream fs;
 	string tmp;
 	vector<string> vtmp;
-	ifs.open(v_File_Path);
-	while (!ifs.eof())
+	fs.open(v_File_Path);
+	while (!fs.eof())
 	{
-		getline(ifs, tmp);
+		getline(fs, tmp);
 		vtmp.push_back(tmp);
 	}
-	ifs.close();
+	fs.close();
 
-	ofstream of;
-	of.open(v_File_Path, ios::out | ios::trunc);
+	fs.open(v_File_Path, ios::out | ios::trunc);
 
 	for (int i = vtmp.size() - 1; i > -1; i--)
 	{
 		if (i == vtmp.size() - 1)
 		{
-			of << "后门,";
+			fs << "后门,";
 		}
-		else if (i == 1)
+		else if (i == 0)
 		{
-			of << "前门,";
+			fs << "前门,";
 		}
 		else
 		{
-			of << ",";
+			fs << ",";
 		}
-		of << vtmp.at(i) << endl;
+		fs << vtmp.at(i) << endl;
 	}
-	PlatformInMiddle(of);
-	of.close();
+	PlatformInMiddle(fs);
+	fs.close();
 
 	v_Status = "座位表生成完成";
 	UpdateData(FALSE);
@@ -311,11 +310,7 @@ void CRandomSeatDlg::OnBnClickedAbout()
 void CRandomSeatDlg::OnBnClickedSelect()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	BOOL isOpen = FALSE;					//是否打开(否则为保存)
-	CString defaultEx = L"csv";				//默认扩展名
-	CString fileName = L"座位表.csv";			//默认文件名
-	CString filter = L"CSV Files(*.csv)\0*.csv\0\0";	//文件过虑的类型
-	CFileDialog openFileDlg(isOpen, defaultEx, fileName, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, filter, NULL);
+	CFileDialog openFileDlg(false, _T("csv"), _T("座位表.csv"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("CSV Files(*.csv)\0*.csv\0\0"), NULL);
 
 	if (IDOK == openFileDlg.DoModal())
 	{
