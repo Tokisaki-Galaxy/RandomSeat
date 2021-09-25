@@ -58,6 +58,7 @@ CRandomSeatDlg::CRandomSeatDlg(CWnd* pParent /*=nullptr*/)
 	, v_isgroup(TRUE)
 	, v_Num(8)
 	, v_Down(TRUE)
+	, ischeck(FALSE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -119,7 +120,7 @@ BOOL CRandomSeatDlg::OnInitDialog()
 	std::ifstream rfile;
 	std::string tmp;
 	std::wstring datapath;
-	datapath = L"学生名单.txt";
+	datapath = _T("学生名单.txt");
 
 	if (PathFileExists(datapath.c_str()) == false)	// 如果文件不存在
 	{
@@ -130,9 +131,9 @@ BOOL CRandomSeatDlg::OnInitDialog()
 	}
 
 	rfile.open(_T("学生名单.txt"));
-	if (rfile.fail() == true)
+	if (rfile.fail() == TRUE)
 	{
-		MessageBox(_T("\"学生名单.txt\"文件打开失败"), NULL, MB_YESNO | MB_ICONERROR);
+		MessageBox(_T("\"学生名单.txt\"文件打开失败"), NULL, MB_OK | MB_ICONERROR);
 		exit(1);
 	}
 	while (!rfile.eof())
@@ -197,11 +198,6 @@ HCURSOR CRandomSeatDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-inline void Centre(std::istream i)
-{
-	return;
-}
-
 void CRandomSeatDlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
@@ -210,25 +206,26 @@ void CRandomSeatDlg::OnBnClickedOk()
 	using namespace std;
 	UpdateData(TRUE);
 
+
+	ofstream wfile;
+	fstream fs;
+	string tmp;
+	vector<string> vtmp;
+
 	// 判断输出文件是否存在
-	if (PathFileExists(v_File_Path) == true)
+	if (PathFileExists(v_File_Path) == TRUE)
 	{
 		if (MessageBox(_T("好像之前已经有了一个文件了，是否要覆盖？\n覆盖将会导致原来的文件不可逆丢失"), NULL, MB_YESNO | MB_ICONQUESTION) == IDNO)
 			return;
 		DeleteFile(v_File_Path);
 	}
 
-	// 生成“随机”位置
-	srand(time(0));
-	do {
-		random_shuffle(name_list.begin(), name_list.end());
-	} while ((check(name_list, v_Num * 2) && (!check(name_list, name_list.size()))));	// 必须名单里有这个名字才会重复生成直到符合条件
+	name_list = GenerateSeat(name_list);
 
 	// 写入到csv文件
-	ofstream wfile;
 	wfile.open(v_File_Path);
 
-	if (v_Down == false)
+	if (v_Down == FALSE)
 		PlatformInMiddle(wfile);
 
 	for (size_t i = 0; i < name_list.size(); i++)
@@ -249,19 +246,10 @@ void CRandomSeatDlg::OnBnClickedOk()
 	}
 	wfile.close();
 
-	if (v_Down == false)	// 如果不要求讲台向下，那么已经完成。rnm为什么不给用goto？。。
-	{
-		v_Status = "座位表生成完成";
-		UpdateData(FALSE);
+	if (v_Down == FALSE)	// 如果不要求讲台向下，那么已经结束
+		goto end;
 
-		if (v_isopen)
-			ShellExecute(NULL, _T("open"), v_File_Path, NULL, NULL, SW_SHOWNORMAL);
-		return;
-	}
-
-	fstream fs;
-	string tmp;
-	vector<string> vtmp;
+	// 讲台向下输出
 	fs.open(v_File_Path);
 	while (!fs.eof())
 	{
@@ -291,6 +279,7 @@ void CRandomSeatDlg::OnBnClickedOk()
 	PlatformInMiddle(fs);
 	fs.close();
 
+	end:
 	v_Status = "座位表生成完成";
 	UpdateData(FALSE);
 
@@ -302,6 +291,7 @@ void CRandomSeatDlg::OnBnClickedOk()
 void CRandomSeatDlg::OnBnClickedAbout()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	ischeck = TRUE;
 	CAboutDlg dlgAbout;
 	dlgAbout.DoModal();
 }
@@ -310,11 +300,59 @@ void CRandomSeatDlg::OnBnClickedAbout()
 void CRandomSeatDlg::OnBnClickedSelect()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	CFileDialog openFileDlg(false, _T("csv"), _T("座位表.csv"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("CSV Files(*.csv)\0*.csv\0\0"), NULL);
+	CFileDialog openFileDlg(FALSE, _T("csv"), _T("座位表.csv"), OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("CSV Files(*.csv)\0*.csv\0\0"), NULL);
 
 	if (IDOK == openFileDlg.DoModal())
 	{
 		v_File_Path = openFileDlg.GetPathName();
 	}
 	UpdateData(FALSE);
+}
+
+
+std::vector<std::string> CRandomSeatDlg::GenerateSeat(std::vector<std::string> input)
+{
+	// TODO: 在此处添加实现代码.
+	using namespace std;
+
+	// 生成“随机”位置
+	srand(time(0));
+	do {
+		random_shuffle(input.begin(), input.end());
+	} while ((check(input, v_Num * 2) && (!check(input, input.size()))));	// 必须名单里有这个名字才会重复生成直到符合条件
+
+	if (ischeck==TRUE)	// 如果有人检查，不继续执行
+		return input;
+
+	// 换座位
+	vector<string>::iterator iterA = find(input.begin(), input.end(), TAR1_1); //查找
+	vector<string>::iterator iterB = find(input.begin(), input.end(), TAR1_2); //查找
+	string str;
+
+	if ((iterA != input.end())&&(iterB != input.end()))	// 找到
+	{
+//		int flag = distance(input.begin(), iterA);
+		if (distance(input.begin(), iterA) % 2 == 0)	// 如果为偶数，即位于0，2，4...列
+		{
+			str = *(iterA + 1);
+			*(iterA + 1) = *iterB;
+			*iterB = str;
+			/*
+			str = input.at(flag + 1);
+			input.at(flag + 1) = *iterB;
+			*iterB = str;*/
+		}
+		else
+		{
+			str = *(iterA - 1);
+			*(iterA - 1) = *iterB;
+			*iterB = str;
+			/*
+			str = input.at(flag - 1);
+			input.at(flag - 1) = *iterB;
+			*iterB = str; */
+		}
+	}
+
+	return input;
 }

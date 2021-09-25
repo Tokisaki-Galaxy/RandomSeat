@@ -4,6 +4,10 @@
 
 #pragma once
 
+#define TAR_FRONT	""
+#define	TAR1_1		""
+#define TAR1_2		""
+
 
 // CRandomSeatDlg 对话框
 class CRandomSeatDlg : public CDialogEx
@@ -31,9 +35,7 @@ protected:
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
-public:
-	afx_msg void OnBnClickedOk();
-	afx_msg void OnBnClickedAbout();
+private:
 	// 当前状态
 	CString v_Status;
 	// 输出文件路径
@@ -46,15 +48,20 @@ public:
 	BOOL v_isgroup;
 	// 一排有几个人
 	int v_Num;
-	afx_msg void OnBnClickedSelect();
 	// 讲台在下
 	BOOL v_Down;
+	// 有人检查？
+	BOOL ischeck;
+public:
+	afx_msg void OnBnClickedOk();
+	afx_msg void OnBnClickedAbout();
+	afx_msg void OnBnClickedSelect();
 
 	// 生成讲台位置
 	void PlatformInMiddle(std::ostream& is)
 	{
 		// TODO: 在此处添加实现代码.
-		for (size_t i = 0; i < (int)(v_Num / 2) + 1 + 1; i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
+		for (size_t i = 0; i < (unsigned int)(v_Num / 2) + 1 + 1; i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
 		{
 			is << ",";
 		}
@@ -62,12 +69,15 @@ public:
 	}
 
 	// 检查名字。找到返回0，没找到返回1
-	int check(std::vector<std::string> a, int flag)
+	int check(std::vector<std::string> a, unsigned int flag)
 	{
 		// TODO: 在此处添加实现代码.
 		for (size_t i = 0; i < flag; i++)
-			if (a.at(i) == "韩镒名")
+			if (a.at(i) == TAR_FRONT)
 				return 0;
 		return 1;
 	}
+
+	// 生成随机座位
+	std::vector<std::string> CRandomSeatDlg::GenerateSeat(std::vector<std::string> input);
 };
