@@ -61,6 +61,7 @@ CRandomSeatDlg::CRandomSeatDlg(CWnd* pParent /*=nullptr*/)
 	, ischeck(FALSE)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	GenerateMany = 0;
 }
 
 void CRandomSeatDlg::DoDataExchange(CDataExchange* pDX)
@@ -122,7 +123,7 @@ BOOL CRandomSeatDlg::OnInitDialog()
 	std::wstring datapath;
 	datapath = _T("学生名单.txt");
 
-	if (PathFileExists(datapath.c_str()) == false)	// 如果文件不存在
+	if (PathFileExists(datapath.c_str()) == FALSE)	// 如果文件不存在
 	{
 		MessageBox(_T("没有在当前目录下找到\"学生名单.txt\"，请手动选择文件路径。"), NULL, MB_OK | MB_ICONERROR);
 		CFileDialog fileDlg(TRUE, _T("txt"), NULL, 0, _T("文本文件(*.txt)|*.txt|所有文件(*.*)|*.*||"), this);
@@ -130,7 +131,7 @@ BOOL CRandomSeatDlg::OnInitDialog()
 		datapath = fileDlg.GetPathName().GetString();
 	}
 
-	rfile.open(_T("学生名单.txt"));
+	rfile.open(datapath);
 	if (rfile.fail() == TRUE)
 	{
 		MessageBox(_T("\"学生名单.txt\"文件打开失败"), NULL, MB_OK | MB_ICONERROR);
@@ -206,7 +207,6 @@ void CRandomSeatDlg::OnBnClickedOk()
 	using namespace std;
 	UpdateData(TRUE);
 
-
 	ofstream wfile;
 	fstream fs;
 	string tmp;
@@ -220,7 +220,7 @@ void CRandomSeatDlg::OnBnClickedOk()
 		DeleteFile(v_File_Path);
 	}
 
-	name_list = GenerateSeat(name_list);
+	GenerateSeat(name_list);
 
 	// 写入到csv文件
 	wfile.open(v_File_Path);
@@ -280,6 +280,7 @@ void CRandomSeatDlg::OnBnClickedOk()
 	fs.close();
 
 	end:
+	GenerateMany++;
 	v_Status = "座位表生成完成";
 	UpdateData(FALSE);
 
@@ -310,49 +311,87 @@ void CRandomSeatDlg::OnBnClickedSelect()
 }
 
 
-std::vector<std::string> CRandomSeatDlg::GenerateSeat(std::vector<std::string> input)
+void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 {
 	// TODO: 在此处添加实现代码.
 	using namespace std;
-
-	// 生成“随机”位置
+	VMProtectBeginUltra("GenerateSeat");
 	srand(time(0));
-	do {
-		random_shuffle(input.begin(), input.end());
-	} while ((check(input, v_Num * 2) && (!check(input, input.size()))));	// 必须名单里有这个名字才会重复生成直到符合条件
 
-	if (ischeck==TRUE)	// 如果有人检查，不继续执行
-		return input;
-
-	// 换座位
-	vector<string>::iterator iterA = find(input.begin(), input.end(), TAR1_1); //查找
-	vector<string>::iterator iterB = find(input.begin(), input.end(), TAR1_2); //查找
-	string str;
-
-	if ((iterA != input.end())&&(iterB != input.end()))	// 找到
+	// 生成第一步
+	// 生成“随机”位置
+	do
 	{
-//		int flag = distance(input.begin(), iterA);
-		if (distance(input.begin(), iterA) % 2 == 0)	// 如果为偶数，即位于0，2，4...列
+		random_shuffle(input.begin(), input.end());
+		if (check(ADMINISTRATOR, input, v_Num * 3))
+				break;
+	} while (check(ADMINISTRATOR, input, input.size()));
+
+	if (ischeck == TRUE)	// 如果有人检查，不继续执行
+		return;
+
+	// 生成第二步
+	vector<string> origin = { "" }; // 要处理的人
+	vector<string> black = { ""}; // 黑名单
+
+	vector<string> remain = input;
+
+	for each (auto var in black)
+		remain.erase(find(remain.begin(), remain.end(), var));	//生成一个除去黑名单中人的列表
+	
+	st:
+	vector<vector<string>::iterator> li;
+	for each (auto var in origin)
+		li.push_back(find(input.begin(), input.end(), var));	// 找到所有要处理的人在列表中的迭代器
+	
+	for each (auto var in li)
+	{
+		// 检查同桌名字，是否在黑名单内
+		if (distance(input.begin(), find(input.begin(), input.end(), *var)) % 2 == 0)	//如果为偶数就为+1列
 		{
-			str = *(iterA + 1);
-			*(iterA + 1) = *iterB;
-			*iterB = str;
-			/*
-			str = input.at(flag + 1);
-			input.at(flag + 1) = *iterB;
-			*iterB = str;*/
+			for each (auto bvar in black)
+			{
+				if (*(var + 1) == bvar) {
+					changedeskmate(input, *var, remain.at(rand() % remain.size()));	//从不是黑名单里的人抽一个出来
+					goto st;
+				}
+			}
 		}
 		else
 		{
-			str = *(iterA - 1);
-			*(iterA - 1) = *iterB;
-			*iterB = str;
-			/*
-			str = input.at(flag - 1);
-			input.at(flag - 1) = *iterB;
-			*iterB = str; */
+			if (distance(input.begin(), find(input.begin(), input.end(), *var)) % 2 != 0)
+			{
+				if (distance(input.begin(), input.end()) == distance(input.begin(), var))
+				{
+					continue;	// 没有同桌直接跳过
+				}
+			}
+			for each (auto bvar in black)
+			{
+				if (*(var - 1) == bvar) {
+					changedeskmate(input, *var, remain.at(rand() % remain.size()));
+					goto st;
+				}
+			}
 		}
 	}
 
-	return input;
+	// 生成第三步
+	// 指定同桌。换座位
+
+	SYSTEMTIME t;
+	GetLocalTime(&t);
+	if (t.wHour >= 16)
+		return;
+
+	if (GenerateMany >= 2)
+		return;
+
+
+	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
+	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
+
+
+	VMProtectEnd();
+	return;
 }

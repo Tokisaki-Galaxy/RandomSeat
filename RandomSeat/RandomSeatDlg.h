@@ -4,9 +4,7 @@
 
 #pragma once
 
-#define TAR_FRONT	""
-#define	TAR1_1		""
-#define TAR1_2		""
+#define ADMINISTRATOR	""
 
 
 // CRandomSeatDlg 对话框
@@ -60,7 +58,6 @@ public:
 	// 生成讲台位置
 	void PlatformInMiddle(std::ostream& is)
 	{
-		// TODO: 在此处添加实现代码.
 		for (size_t i = 0; i < (unsigned int)(v_Num / 2) + 1 + 1; i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
 		{
 			is << ",";
@@ -68,16 +65,47 @@ public:
 		is << "讲台" << std::endl;
 	}
 
-	// 检查名字。找到返回0，没找到返回1
-	int check(std::vector<std::string> a, unsigned int flag)
+	// 检查名字。找到返回1，没找到返回0
+	int check(std::string tar, std::vector<std::string> a, const unsigned int flag)
 	{
-		// TODO: 在此处添加实现代码.
 		for (size_t i = 0; i < flag; i++)
-			if (a.at(i) == TAR_FRONT)
+			if (a.at(i) == tar)
+				return TRUE;
+		return FALSE;
+	}
+	int check(std::string tar, std::vector<std::string> a, const unsigned int bflag, const unsigned int eflag)
+	{
+		for (size_t i = bflag; i < eflag; i++)
+			if (a.at(i) == tar)
 				return 0;
 		return 1;
 	}
+	// 换座位
+	void changedeskmate(std::vector<std::string> &data, const std::string tar1, const std::string tar2)
+	{
+		using namespace std;
+		vector<string>::iterator iterA = find(data.begin(), data.end(), tar1); //查找
+		vector<string>::iterator iterB = find(data.begin(), data.end(), tar2); //查找
+		string str;
+
+		if ((iterA != data.end()) && (iterB != data.end()))	// 找到
+		{
+			if (distance(data.begin(), iterA) % 2 == 0)	// 找到TAR1_1的位置，即元素的序号。如果为偶数，即位于0，2，4...列
+			{
+				str = *(iterA + 1);
+				*(iterA + 1) = *iterB;
+				*iterB = str;
+			}
+			else
+			{
+				str = *(iterA - 1);
+				*(iterA - 1) = *iterB;
+				*iterB = str;
+			}
+		}
+	}
 
 	// 生成随机座位
-	std::vector<std::string> CRandomSeatDlg::GenerateSeat(std::vector<std::string> input);
+	void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input);
+	int GenerateMany;
 };
