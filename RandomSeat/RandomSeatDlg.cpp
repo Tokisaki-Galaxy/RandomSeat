@@ -31,6 +31,8 @@ public:
 // 实现
 protected:
 	DECLARE_MESSAGE_MAP()
+public:
+	afx_msg void OnBnClickedOpenGithub();
 };
 
 CAboutDlg::CAboutDlg() : CDialogEx(IDD_ABOUTBOX)
@@ -43,6 +45,7 @@ void CAboutDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CAboutDlg, CDialogEx)
+	ON_BN_CLICKED(IDC_OPEN_GITHUB, &CAboutDlg::OnBnClickedOpenGithub)
 END_MESSAGE_MAP()
 
 
@@ -315,7 +318,9 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 {
 	// TODO: 在此处添加实现代码.
 	using namespace std;
+#ifdef SU
 	VMProtectBeginUltra("GenerateSeat");
+#endif
 	srand(time(0));
 
 	// 生成第一步
@@ -331,6 +336,8 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 		return;
 
 	// 生成第二步
+#if SU
+
 	vector<string> origin = { "" }; // 要处理的人
 	vector<string> black = { ""}; // 黑名单
 
@@ -375,6 +382,7 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 			}
 		}
 	}
+#endif
 
 	// 生成第三步
 	// 指定同桌。换座位
@@ -384,14 +392,24 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 	if (t.wHour >= 16)
 		return;
 
-	if (GenerateMany >= 2)
+	if (GenerateMany >= 1)
 		return;
 
+#ifdef SU
 
 	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
 	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
-
+	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
 
 	VMProtectEnd();
+#endif
+
 	return;
+}
+
+
+void CAboutDlg::OnBnClickedOpenGithub()
+{
+	// TODO: 在此添加控件通知处理程序代码
+	ShellExecute(NULL, NULL, _T("https://github.com/Tokisaki-Galaxy/RandomSeat"), NULL,NULL, SW_SHOWNORMAL);
 }

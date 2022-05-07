@@ -16,6 +16,8 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#ifdef SU
 #include "VMProtectSDK.h"
+#endif
 
 #endif //PCH_H
