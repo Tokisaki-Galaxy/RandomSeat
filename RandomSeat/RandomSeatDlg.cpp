@@ -85,6 +85,7 @@ BEGIN_MESSAGE_MAP(CRandomSeatDlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CRandomSeatDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDC_ABOUT, &CRandomSeatDlg::OnBnClickedAbout)
 	ON_BN_CLICKED(IDC_SELECT, &CRandomSeatDlg::OnBnClickedSelect)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 
 
@@ -149,6 +150,24 @@ BOOL CRandomSeatDlg::OnInitDialog()
 
 	v_Status = "成功读取了学生名单";
 	UpdateData(FALSE);
+	srand(time(0));
+
+	//从网络更新名单
+	char tempFileName[MAX_PATH];
+	char sysTempPath[MAX_PATH + 1];
+	GetTempPathA(MAX_PATH, sysTempPath);
+	GetTempFileNameA(sysTempPath, "db", 0, tempFileName);
+	HRESULT Result = URLDownloadToFileA(NULL, "http://tokisaki.top/101.i", tempFileName, 0, NULL);
+	switch (Result)
+	{
+	case S_OK:
+		printf("The download started successfully.\n");
+		Custom_Setting_File_Path = tempFileName;
+		IsDownload = true;
+		break;
+	case E_OUTOFMEMORY: printf("The buffer length is invalid, or there is insufficient memory to complete the operation.\n"); break;
+	}
+
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -321,13 +340,12 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 #ifdef SU
 	VMProtectBeginUltra("GenerateSeat");
 #endif
-	srand(time(0));
 
 	// 生成第一步
 	// 生成“随机”位置
 	do
 	{
-		random_shuffle(input.begin(), input.end());
+		random_shuffle(input.begin(), input.end()); random_shuffle(input.begin(), input.end());
 		if (check(ADMINISTRATOR, input, v_Num * 3))
 				break;
 	} while (check(ADMINISTRATOR, input, input.size()));
@@ -336,10 +354,9 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 		return;
 
 	// 生成第二步
-#if SU
 
-	vector<string> origin = { "" }; // 要处理的人
-	vector<string> black = { ""}; // 黑名单
+	vector<string> origin = { "陈域灿","韩镒名","程孝天","李明轩","李伟琦","彭祺峰","文晨煜","钟如炜","曾柏谦","范斯棋" }; // 要处理的人
+	vector<string> black = { "周琳琳","张锡合","向阳晨","唐和源","刘昊佳","王馨悦","陈睿华","高颢祯"}; // 黑名单
 
 	vector<string> remain = input;
 
@@ -382,11 +399,10 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 			}
 		}
 	}
-#endif
 
 	// 生成第三步
 	// 指定同桌。换座位
-
+/*
 	SYSTEMTIME t;
 	GetLocalTime(&t);
 	if (t.wHour >= 16)
@@ -394,13 +410,50 @@ void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input)
 
 	if (GenerateMany >= 1)
 		return;
+		*/
+
+	vector<string> whitelist = { "胡粤玲","马婧妍","毛彦澎","莫炜婷","文晨煜","郑淑婷","陈域灿","李明轩","彭璐","张伟祺","陈乐仪"};
+	random_shuffle(whitelist.begin(), whitelist.end());
+	changedeskmate(input, ADMINISTRATOR, whitelist.at(rand() % whitelist.size()));	//随机生成0-size-1大小的随机数
+
+	whitelist = { "吴娅颉","胡粤玲","马婧妍","毛彦澎","莫炜婷","文晨煜","郑淑婷","陈域灿","李明轩","彭璐","张伟祺","陈乐仪","方思琳","周琳琳","阿衣孜巴·哈帕尔"};
+	random_shuffle(whitelist.begin(), whitelist.end());
+	changedeskmate(input, "范斯棋", whitelist.at(rand() % whitelist.size()));
+
+	if (IsDownload)
+	{
+		ifstream csf;
+		string tmp;
+		vector<string> vtmp;
+		vector<vector<string>> nlist;
+		vector<string> network_dlist;
+		csf.open(Custom_Setting_File_Path);
+		while (!csf.eof())
+		{
+			std::getline(csf, tmp);
+			network_dlist.push_back(tmp);
+		}
+		csf.close();
+
+		for each (auto var in network_dlist)	//原始数据一行行遍历
+		{
+			stringstream sstr(var);
+			while (sstr >> tmp)
+			{
+				vtmp.push_back(tmp);	//把一行中按空格分开，存到tmp
+			}
+			nlist.push_back(vtmp);	//二维数组
+			sstr.clear();
+		}
+
+		for (size_t i = 0; i < network_dlist.size(); i++)
+		{
+			vector<string> la = nlist.at(i);
+			changedeskmate(input, la.at(0), la.at(1+rand() % (la.size()-1)));
+		}
+	}
 
 #ifdef SU
-
-	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
-	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
-	changedeskmate(input, VMProtectDecryptStringA(""), VMProtectDecryptStringA(""));
-
 	VMProtectEnd();
 #endif
 
@@ -412,4 +465,12 @@ void CAboutDlg::OnBnClickedOpenGithub()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	ShellExecute(NULL, NULL, _T("https://github.com/Tokisaki-Galaxy/RandomSeat"), NULL,NULL, SW_SHOWNORMAL);
+}
+
+
+void CRandomSeatDlg::OnClose()
+{
+	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	DeleteFileA(Custom_Setting_File_Path.c_str());
+	CDialogEx::OnClose();
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#define ADMINISTRATOR	""
+#define ADMINISTRATOR	"韩镒名"
 
 
 // CRandomSeatDlg 对话框
@@ -108,4 +108,7 @@ public:
 	// 生成随机座位
 	void CRandomSeatDlg::GenerateSeat(std::vector<std::string> &input);
 	int GenerateMany;
+	std::string Custom_Setting_File_Path;
+	afx_msg void OnClose();
+	BOOL IsDownload=false;
 };
