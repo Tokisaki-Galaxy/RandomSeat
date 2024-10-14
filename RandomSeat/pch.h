@@ -6,6 +6,8 @@
 
 #ifndef PCH_H
 #define PCH_H
+
+// 如有需要可以激活VMProtect保护，但是注意启用下面的宏后，需要在编译后的执行文件中添加VMProtectSDK32.dll或VMProtectSDK64.dll
 //#define SU
 
 // 添加要在此处预编译的标头
