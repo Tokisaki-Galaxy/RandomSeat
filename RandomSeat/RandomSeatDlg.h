@@ -56,9 +56,9 @@ public:
 	afx_msg void OnBnClickedSelect();
 
 	// 生成讲台位置
-	void PlatformInMiddle(std::ostream& is)
+	void PlatformInMiddle(std::ostream& is) const
 	{
-		for (size_t i = 0; i < (unsigned int)(v_Num / 2) + 1 + 1; i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
+		for (size_t i = 0; i <((v_Num % 2 == 0) ? (v_Num / 2) + 1 : (static_cast<unsigned long long>(v_Num / 2)) + 2); i++)	// 第一个+1是向上取整，第二个+1是因为有前后门，多了一列
 		{
 			is << ",";
 		}
